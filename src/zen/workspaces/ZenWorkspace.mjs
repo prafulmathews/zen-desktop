@@ -56,8 +56,18 @@ export class nsZenWorkspace extends MozXULElement {
             <hbox class="zen-current-workspace-indicator-icon" />
           </stack>
           <label class="zen-current-workspace-indicator-name" />
-          <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional zen-workspaces-actions" context="zenWorkspaceMoreActions" />
+          <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional zen-workspace-search-button"
+                                   tooltiptext="Search Tabs"
+                                   style="list-style-image: url('chrome://global/skin/icons/search-glass.svg');" />
+        <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional zen-workspaces-actions" context="zenWorkspaceMoreActions" />
         </vbox>
+        <hbox class="zen-workspace-search-header" hidden="true" align="center" style="min-height: 36px; padding: 0 8px; margin-bottom: 4px;">
+                  <html:input class="zen-workspace-search-input" placeholder="Search tabs..."
+                              style="flex: 1; min-width: 0; background: transparent; color: inherit; border: none; outline: none; box-shadow: none; padding: 0; font-size: 14px; font-family: inherit;" />
+                  <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional zen-workspace-search-close-button"
+                                 tooltiptext="Close Search"
+                                 style="list-style-image: url('chrome://global/skin/icons/close.svg'); margin-left: 4px;" />
+                </hbox>
         <arrowscrollbox orient="vertical" class="workspace-arrowscrollbox">
           <vbox class="zen-workspace-tabs-section zen-workspace-pinned-tabs-section" hide-separator="true">
             <html:div class="zen-tab-group-start space-fake-collapsible-start" style="order: -9999;" />
@@ -102,6 +112,30 @@ export class nsZenWorkspace extends MozXULElement {
 
   constructor() {
     super();
+  }
+
+  filterWorkspaceTabs(query) {
+    query = query.toLowerCase();
+
+    // Get all tabs in THIS workspace
+    const allElements = [...this.pinnedTabsContainer.children, ...this.tabsContainer.children];
+
+    for (const child of allElements) {
+      if (gBrowser.isTab(child)) {
+        const title = (child.label || "").toLowerCase();
+        const url = (child.linkedBrowser?.currentURI?.spec || "").toLowerCase();
+
+        // If it matches the query (or query is empty), show it. Otherwise hide it.
+        if (query === "" || title.includes(query) || url.includes(query)) {
+          child.style.display = "";
+        } else {
+          child.style.display = "none";
+        }
+      }
+    }
+
+    // Update scrollbars since the number of visible items changed
+    this.#updateOverflow();
   }
 
   connectedCallback() {
@@ -151,6 +185,48 @@ export class nsZenWorkspace extends MozXULElement {
     this.indicator
       .querySelector(".zen-workspaces-actions")
       .addEventListener("click", this.onActionsCommand.bind(this));
+
+    // --- SEARCH FEATURE LOGIC ---
+    const searchButton = this.indicator.querySelector(".zen-workspace-search-button");
+    const searchHeader = this.querySelector(".zen-workspace-search-header");
+    const searchInput = this.querySelector(".zen-workspace-search-input");
+    const searchCloseBtn = this.querySelector(".zen-workspace-search-close-button");
+
+    if (searchButton && searchHeader) {
+      const openSearch = (event) => {
+        event?.stopPropagation();
+        // Hide normal indicator, show search header
+        this.indicator.style.display = "none";
+        searchHeader.removeAttribute("hidden");
+        searchInput.focus();
+      };
+
+      const closeSearch = (event) => {
+        event?.stopPropagation();
+        // Hide search header, show normal indicator
+        searchHeader.setAttribute("hidden", "true");
+        this.indicator.style.display = "";
+        searchInput.value = "";
+        this.filterWorkspaceTabs(""); // Reset tabs
+      };
+
+      // Button clicks
+      searchButton.addEventListener("command", openSearch);
+      searchCloseBtn.addEventListener("command", closeSearch);
+
+      // Typing filter
+      searchInput.addEventListener("input", (event) => {
+        this.filterWorkspaceTabs(event.target.value);
+      });
+
+      // Keyboard shortcuts
+      searchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeSearch();
+        }
+      });
+    }
+    // ----------------------------
 
     this.indicator
       .querySelector(".zen-current-workspace-indicator-icon")
