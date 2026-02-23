@@ -1,4 +1,4 @@
-name: Linux Build
+name: Linux Build (x86_64)
 
 on:
   push:
@@ -28,6 +28,11 @@ jobs:
         with:
           tool-cache: false
 
+      - name: Configure Git identity
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -53,32 +58,32 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Download Firefox source and deps
+      - name: Download Firefox source and dependencies
         run: npm run download
 
       - name: Setup Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
+          source "$HOME/.cargo/env"
           rustup target add x86_64-unknown-linux-gnu
 
-      - name: Import sources
+      - name: Import Zen patches
         run: |
-          source $HOME/.cargo/env
+          source "$HOME/.cargo/env"
           npm run import
 
-      - name: Bootstrap engine
+      - name: Bootstrap Firefox build
         run: |
           cd engine
           ./mach --no-interactive bootstrap --application-choice browser
           cd ..
 
-      - name: Build binary
+      - name: Build Zen (Linux x86_64)
         run: |
-          source $HOME/.cargo/env
+          source "$HOME/.cargo/env"
           bash .github/workflows/src/release-build.sh
 
-      - name: Upload binary
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: zen-linux-x86_64
