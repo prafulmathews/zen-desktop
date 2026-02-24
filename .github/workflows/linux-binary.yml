@@ -1,91 +1,90 @@
-name: Linux Build (x86_64)
+name: Build Zen Browser (Linux)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
-
-    env:
-      SURFER_PLATFORM: linux
-      SURFER_COMPAT: x86_64
-      CARGO_TERM_COLOR: always
-      CARGO_INCREMENTAL: 0
+      contents: write  # needed to publish releases
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-
-      - name: Configure Git identity
+      - name: Configure Git
         run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            python3 python3-pip \
-            build-essential \
-            yasm nasm \
-            libgtk-3-dev \
-            libasound2-dev \
-            libdbus-1-dev \
-            libdrm-dev \
-            libx11-xcb-dev \
-            libxt-dev \
-            libpulse-dev \
-            libcurl4-openssl-dev \
-            llvm lld
+          sudo apt-get install -y python3 python3-pip dos2unix yasm nasm \
+            build-essential libgtk2.0-dev libpython3-dev m4 uuid \
+            libasound2-dev libcurl4-openssl-dev libdbus-1-dev libdrm-dev \
+            libdbus-glib-1-dev libgtk-3-dev libpulse-dev libx11-xcb-dev \
+            libxt-dev xvfb lld llvm pkg-config curl zip g++ make
+
+      - name: Install Rust 1.90.0
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+            sh -s -- -y --default-toolchain 1.90.0
+          source $HOME/.cargo/env
+          rustup target add x86_64-unknown-linux-gnu
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Export environment variables
+        run: |
+          echo "ZEN_RELEASE=1" >> $GITHUB_ENV
+          echo "SURFER_PLATFORM=linux" >> $GITHUB_ENV
 
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Download Firefox source and dependencies
-        run: npm run download
+      - name: Setup Surfer CI
+        run: npm run surfer -- ci --brand release --display-version 1.0a
 
-      - name: Setup Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source "$HOME/.cargo/env"
-          rustup target add x86_64-unknown-linux-gnu
+      - name: Download language packs
+        run: sh scripts/download-language-packs.sh
 
-      - name: Import Zen patches
-        run: |
-          source "$HOME/.cargo/env"
-          npm run import
+      - name: Initialize (download, import, bootstrap)
+        run: npm run init
 
-      - name: Bootstrap Firefox build
-        run: |
-          cd engine
-          ./mach --no-interactive bootstrap --application-choice browser
-          cd ..
+      - name: Build
+        run: npm run build
 
-      - name: Build Zen (Linux x86_64)
-        run: |
-          source "$HOME/.cargo/env"
-          bash .github/workflows/src/release-build.sh
+      - name: Package
+        run: npm run package
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - name: Rename artifact
+        run: mv dist/zen-1.0a.en-US.linux-x86_64.tar.xz zen.linux-x86_64.tar.xz
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
         with:
-          name: zen-linux-x86_64
-          path: |
-            dist/*.tar.xz
+          tag_name: v1.0a
+          release_name: Zen Browser v1.0a
+          body: |
+            Automated Linux release build for Zen Browser v1.0a
+            Built and packaged by GitHub Actions.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./zen.linux-x86_64.tar.xz
+          asset_name: zen.linux-x86_64.tar.xz
+          asset_content_type: application/x-xz
