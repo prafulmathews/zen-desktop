@@ -1,5 +1,12 @@
+Modified it so that there's now a search button along with the space title to exclusively search the tabs in a space
+
+https://github.com/user-attachments/assets/e1a1bf44-9d8d-4968-820d-c10a6134811c
 <!--
-   - This Source Code Form is subject to the terms of the Mozilla Public
+   - This Source Code Form is sub
+
+https://github.com/user-attachments/assets/40e35041-be12-49a2-a224-ed097c3dd086
+
+ject to the terms of the Mozilla Public
    - License, v. 2.0. If a copy of the MPL was not distributed with this
    - file, You can obtain one at http://mozilla.org/MPL/2.0/.
    -->
