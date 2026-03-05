@@ -63,7 +63,7 @@ export class nsZenWorkspace extends MozXULElement {
         </vbox>
         <hbox class="zen-workspace-search-header" hidden="true" align="center" style="min-height: 36px; padding: 0 8px; margin-bottom: 4px;">
                   <html:input class="zen-workspace-search-input" placeholder="Search tabs..."
-                              style="flex: 1; min-width: 0; background: transparent; color: inherit; border: none; outline: none; box-shadow: none; padding: 0; font-size: 14px; font-family: inherit;" />
+                              style="flex: 1; min-width: 0; background: transparent; color: inherit; border: none; outline: none; box-shadow: none; padding: 0 0 0 4px; font-size: 14px; font-family: inherit;" />
                   <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional zen-workspace-search-close-button"
                                  tooltiptext="Close Search"
                                  style="list-style-image: url('chrome://global/skin/icons/close.svg'); margin-left: 4px;" />
